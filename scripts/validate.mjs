@@ -1,11 +1,20 @@
 import { createHash } from 'node:crypto';
 import { readdir, readFile, lstat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, URL } from 'node:url';
 
-const gamesRoot = fileURLToPath(new URL('../games/', import.meta.url));
+const rootArgument = process.argv.indexOf('--catalog-root');
+const catalogRoot = rootArgument === -1
+  ? fileURLToPath(new URL('../', import.meta.url))
+  : resolve(process.argv[rootArgument + 1] ?? '');
+if (rootArgument !== -1 && !process.argv[rootArgument + 1]) {
+  throw new Error('Missing value for --catalog-root');
+}
+const gamesRoot = join(catalogRoot, 'games');
 const entries = await readdir(gamesRoot, { withFileTypes: true });
+const sourcePattern = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/;
+const releasePartPattern = /^[A-Za-z0-9._+-]+$/;
 
 for (const entry of entries) {
   if (entry.name === '.gitkeep') continue;
@@ -31,6 +40,13 @@ for (const entry of entries) {
     if (digest !== reference.sha256.toLowerCase()) throw new Error(`Digest mismatch: ${expected}`);
     const definition = JSON.parse(raw);
     if (definition.modId !== reference.modId) throw new Error(`Mod ID mismatch: ${expected}`);
+    const release = definition.release;
+    if (!release || !sourcePattern.test(release.repository) ||
+        !releasePartPattern.test(release.tag) || release.tag.length > 180 ||
+        !/^[A-Za-z0-9._+-]+\.zip$/.test(release.asset) || release.asset.length > 180 ||
+        !/^[a-f0-9]{64}$/.test(release.sha256)) {
+      throw new Error(`Invalid upstream release in ${expected}`);
+    }
   }
 
   const modsRoot = join(gameRoot, 'mods');

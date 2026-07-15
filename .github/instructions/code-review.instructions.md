@@ -11,7 +11,8 @@ excludeAgent: "cloud-agent"
   BepInEx GUIDs, semantic versions, runtime, architecture, and minimum Agent
   version for internal consistency.
 - Verify that each game index digest matches the exact mod JSON and that each mod
-  release digest is a lowercase SHA-256 for the exact stated ZIP asset.
+  release digest is a lowercase SHA-256 for the exact stated upstream GitHub ZIP
+  asset.
 - Flag arbitrary URLs, alternate hosts, unsafe filenames, unbounded fields,
   dependency cycles, missing dependencies, asymmetric conflicts, and duplicate
   IDs or selection values.
@@ -24,3 +25,5 @@ excludeAgent: "cloud-agent"
   attention checkbox being checked is an objective reason for manual review.
 - Require updated schemas, examples, documentation, and validator coverage when
   the catalog contract changes.
+- Require successful protected promotion before merge. Never approve manual
+  rebuilding, replacement, or uploading of catalog release assets.

@@ -35,6 +35,28 @@ jobs:
       - name: Validate paths, references and digests
         run: node scripts/validate.mjs
 
+      - name: Test release archive validation
+        run: python -m unittest scripts/test_verify_release_assets.py
+
+      - name: Verify changed upstream release assets
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mapfile -t definitions < <(
+            git diff --diff-filter=AMR --name-only "$BASE_SHA"...HEAD -- 'games/*/mods/*.json'
+          )
+          if (( ${#definitions[@]} == 0 )); then
+            echo "No changed mod release assets to verify."
+            exit 0
+          fi
+          arguments=()
+          for definition in "${definitions[@]}"; do
+            arguments+=(--definition "$definition")
+          done
+          python scripts/verify_release_assets.py "${arguments[@]}"
+
       - name: Detect newly Official definitions
         if: github.event_name == 'pull_request'
         id: official

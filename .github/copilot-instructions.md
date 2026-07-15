@@ -15,10 +15,11 @@ validation.
   at `games/<app-id>/mods/<mod-id>.json`.
 - `game.json` is an index. Its SHA-256 must match the exact committed bytes of
   each referenced mod JSON file.
-- A mod release SHA-256 must match the exact ZIP asset published in a release of
-  this repository.
-- Never add arbitrary download URLs or alternate release hosts. The desktop app
-  constructs release URLs from the reviewed tag and asset name.
+- A mod release must identify the real public upstream GitHub repository, tag,
+  and ZIP asset. Its SHA-256 must match those exact bytes.
+- Never add arbitrary URLs or non-GitHub release hosts. The protected promotion
+  workflow mirrors verified bytes into the official catalog release
+  `mod-<mod-id>-v<version>` without executing or rebuilding them.
 - Keep `official` false unless a GameTweaks maintainer explicitly reviews and
   approves the mod. Official status grants no additional Agent permissions.
 - Preserve strict IDs, localized text, semantic versions, runtime and

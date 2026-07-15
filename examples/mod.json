@@ -13,6 +13,7 @@
     "minimumAgentVersion": "0.1.0"
   },
   "release": {
+    "repository": "example/example-mod",
     "tag": "example-v1.0.0",
     "asset": "example.accessibility.zip",
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"

@@ -9,7 +9,7 @@
     "schemaVersion": { "const": 1 },
     "modId": { "$ref": "#/$defs/id" },
     "guid": { "type": "string", "minLength": 3, "maxLength": 96, "pattern": "^[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$" },
-    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "version": { "type": "string", "maxLength": 64, "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$" },
     "official": { "type": "boolean" },
     "name": { "$ref": "#/$defs/localizedText" },
     "description": { "$ref": "#/$defs/localizedText" },
@@ -27,11 +27,12 @@
     "release": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["tag", "asset", "sha256"],
+      "required": ["repository", "tag", "asset", "sha256"],
       "properties": {
+        "repository": { "$ref": "#/$defs/repository" },
         "tag": { "$ref": "#/$defs/releasePart" },
         "asset": { "type": "string", "pattern": "^[A-Za-z0-9._+-]+\\.zip$", "maxLength": 180 },
-        "sha256": { "$ref": "#/$defs/sha256" }
+        "sha256": { "$ref": "#/$defs/sha256Lower" }
       }
     },
     "dependencies": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/dependency" } },
@@ -41,6 +42,8 @@
   "$defs": {
     "id": { "type": "string", "minLength": 1, "maxLength": 96, "pattern": "^[A-Za-z0-9._-]+$" },
     "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+    "sha256Lower": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "repository": { "type": "string", "maxLength": 201, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$" },
     "releasePart": { "type": "string", "minLength": 1, "maxLength": 180, "pattern": "^[A-Za-z0-9._+-]+$" },
     "localizedText": {
       "type": "object",
@@ -88,4 +91,3 @@
     }
   }
 }
-

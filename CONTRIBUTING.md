@@ -11,8 +11,15 @@ from a reproducible inspection of the actual game or plugin.
 - Compute hashes from the exact committed JSON and published ZIP bytes.
 - Keep examples outside `games/`; placeholder catalog entries are forbidden.
 - Keep `official` false unless a GameTweaks maintainer explicitly reviews it.
-- Run `node scripts/validate.mjs` and the JSON Schema checks before submitting.
+- Publish the final ZIP in a public release of the mod's real GitHub repository.
+- Run `node scripts/validate.mjs`, `python scripts/verify_release_assets.py`, and
+  the JSON Schema checks before submitting.
 - List the exact checks and hash commands you actually ran in the pull request.
+
+Maintainers must run the protected **Promote mod assets** workflow for the pull
+request and confirm that it succeeds before merging. The workflow copies the
+verified upstream bytes into an immutable official catalog release; do not
+upload, replace, or rebuild mod ZIPs manually.
 
 ## Automated assistance
 

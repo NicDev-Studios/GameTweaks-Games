@@ -10,7 +10,7 @@
 
 ## Release evidence
 
-<!-- List the exact release tag, ZIP asset name, upstream source, and how compatibility was verified. -->
+<!-- List the exact upstream GitHub repository, release tag, ZIP asset name, and how compatibility was verified. -->
 
 ## Digests
 
@@ -26,11 +26,16 @@
 - [ ] I understand and manually verified every submitted value, including tool-assisted output.
 - [ ] Directory, App ID, filename, mod ID, and BepInEx GUID values are internally consistent.
 - [ ] Every `game.json` digest matches the exact committed mod JSON bytes.
-- [ ] Every release digest matches the exact ZIP asset in this repository.
+- [ ] Every release digest matches the exact ZIP asset in the stated upstream GitHub release.
+- [ ] Every upstream repository, tag, and asset identifies the mod author's real public release.
 - [ ] Dependencies exist, minimum versions are valid, and conflicts are complete.
 - [ ] Config defaults, options, bounds, steps, and apply modes match the plugin behavior.
-- [ ] I ran `node scripts/validate.mjs` and the JSON Schema checks.
+- [ ] I ran `node scripts/validate.mjs`, `python scripts/verify_release_assets.py`, and the JSON Schema checks.
 - [ ] `official` remains false, or the required GameTweaks maintainer review is requested.
+
+## Maintainer promotion (when a mod definition changed)
+
+- [ ] The protected **Promote mod assets** workflow succeeded for this pull request; no release asset was uploaded or replaced manually.
 
 ## Attention check
 
