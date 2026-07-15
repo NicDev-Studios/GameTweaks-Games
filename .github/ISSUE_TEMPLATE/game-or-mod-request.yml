@@ -1,0 +1,80 @@
+name: Game or mod request
+description: Request reviewed catalog support for a real Steam game or BepInEx mod.
+title: "[Request]: "
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request type
+      options:
+        - Add a Steam game
+        - Add a mod to an existing game
+        - Add a game and one or more mods
+    validations:
+      required: true
+  - type: input
+    id: steam-app-id
+    attributes:
+      label: Steam App ID
+      placeholder: "Example: 123456"
+    validations:
+      required: true
+  - type: input
+    id: game-name
+    attributes:
+      label: Game name
+    validations:
+      required: true
+  - type: input
+    id: mod-source
+    attributes:
+      label: Mod source
+      description: Link the real source repository or authoritative project page. Leave empty for a game-only request.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Known compatibility
+      description: State Mono or IL2CPP, x86 or x64, tested versions, and how each value was verified. Write "Unknown" rather than guessing.
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Why should this be supported?
+      description: Describe the concrete tweak or configuration value for users.
+    validations:
+      required: true
+  - type: dropdown
+    id: automated-assistance
+    attributes:
+      label: Automated assistance
+      description: State whether generated text or automated analysis was used to prepare this request.
+      options:
+        - No generated content was used
+        - Automated assistance was used and I manually verified every claim
+        - I am unsure whether generated content was used
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmation
+      options:
+        - label: This is a real Steam game and the App ID is correct.
+          required: true
+        - label: Any linked mod source is the real upstream project, not a mirror or generated placeholder.
+          required: true
+        - label: I am not requesting anti-cheat bypass, arbitrary memory access, or process execution.
+          required: true
+        - label: I understand and manually reviewed every submitted claim.
+          required: true
+  - type: checkboxes
+    id: attention
+    attributes:
+      label: Attention check
+      description: Leave the following option unchecked. It identifies blind select-all submissions.
+      options:
+        - label: I selected every checkbox without reading it.
+          required: false

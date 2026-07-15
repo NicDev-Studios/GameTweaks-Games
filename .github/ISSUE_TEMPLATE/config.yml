@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/NicDev-Studios/GameTweaks-Games/security/advisories/new
+    about: Report catalog integrity bypasses or sensitive vulnerabilities privately.
+  - name: GameTweaks application issues
+    url: https://github.com/NicDev-Studios/GameTweaks/issues/new/choose
+    about: Report desktop application, BepInEx installation, Agent, or interface problems in the app repository.

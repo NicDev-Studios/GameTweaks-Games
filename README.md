@@ -13,3 +13,5 @@ approval in branch protection. A pull request that newly sets `official: true`
 then fails until one of those maintainers approves it.
 
 See [Adding a game](docs/adding-a-game.md) and the JSON Schemas in `schemas/`.
+Contributors must also follow [CONTRIBUTING.md](CONTRIBUTING.md), including its
+verification and automated-assistance disclosure requirements.

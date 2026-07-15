@@ -1,0 +1,85 @@
+name: Catalog problem
+description: Report incorrect, outdated, or unsafe game or mod metadata.
+title: "[Catalog]: "
+labels:
+  - bug
+body:
+  - type: input
+    id: steam-app-id
+    attributes:
+      label: Steam App ID
+      placeholder: "Example: 123456"
+    validations:
+      required: true
+  - type: input
+    id: mod-id
+    attributes:
+      label: Mod ID
+      description: Leave empty when the problem affects only the game definition.
+  - type: dropdown
+    id: problem-type
+    attributes:
+      label: Problem type
+      options:
+        - Incorrect game metadata
+        - Incorrect runtime or architecture
+        - Incorrect version or release asset
+        - Invalid digest
+        - Incorrect dependency or conflict
+        - Incorrect configuration field
+        - Official status concern
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Current catalog behavior
+      description: Quote the relevant catalog values and explain the concrete failure.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Verifiable evidence
+      description: Link authoritative upstream documentation, source, or release metadata. Do not guess.
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Expected correction
+    validations:
+      required: true
+  - type: dropdown
+    id: automated-assistance
+    attributes:
+      label: Automated assistance
+      description: State whether generated text or automated analysis was used to prepare this report.
+      options:
+        - No generated content was used
+        - Automated assistance was used and I manually verified every claim
+        - I am unsure whether generated content was used
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmation
+      options:
+        - label: I verified the Steam App ID and mod ID before submitting.
+          required: true
+        - label: I searched existing issues and pull requests for this problem.
+          required: true
+        - label: The evidence above is factual and not generated placeholder content.
+          required: true
+        - label: I understand and manually reviewed every submitted claim.
+          required: true
+  - type: checkboxes
+    id: attention
+    attributes:
+      label: Attention check
+      description: Leave the following option unchecked. It identifies blind select-all submissions.
+      options:
+        - label: I selected every checkbox without reading it.
+          required: false
