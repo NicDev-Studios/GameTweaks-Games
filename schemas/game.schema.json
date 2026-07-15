@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/NicDev-Studios/GameTweaks-Games/schemas/game.schema.json",
+  "title": "GameTweaks game index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "appId", "name", "mods"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "appId": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+    "name": { "$ref": "#/$defs/localizedText" },
+    "mods": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["modId", "file", "sha256"],
+        "properties": {
+          "modId": { "$ref": "#/$defs/id" },
+          "file": { "type": "string", "pattern": "^mods/[A-Za-z0-9._-]+\\.json$" },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 96, "pattern": "^[A-Za-z0-9._-]+$" },
+    "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+    "localizedText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["en"],
+      "properties": {
+        "en": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "de": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    }
+  }
+}
+

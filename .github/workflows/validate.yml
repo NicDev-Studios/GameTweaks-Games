@@ -1,0 +1,76 @@
+name: Validate catalog
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Install JSON Schema validator
+        run: python -m pip install check-jsonschema==0.36.1
+
+      - name: Validate game definitions
+        shell: bash
+        run: |
+          mapfile -t files < <(find games -mindepth 2 -maxdepth 2 -name game.json -type f -print)
+          check-jsonschema --schemafile schemas/game.schema.json examples/game.json "${files[@]}"
+
+      - name: Validate mod definitions
+        shell: bash
+        run: |
+          mapfile -t files < <(find games -mindepth 3 -maxdepth 3 -path '*/mods/*.json' -type f -print)
+          check-jsonschema --schemafile schemas/mod.schema.json examples/mod.json "${files[@]}"
+
+      - name: Validate paths, references and digests
+        run: node scripts/validate.mjs
+
+      - name: Detect newly Official definitions
+        if: github.event_name == 'pull_request'
+        id: official
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git diff --unified=0 "$BASE_SHA"...HEAD -- 'games/*/mods/*.json' | grep -Eq '^\+[^+].*"official"[[:space:]]*:[[:space:]]*true'; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require approved maintainer review for Official definitions
+        if: github.event_name == 'pull_request' && steps.official.outputs.changed == 'true'
+        uses: actions/github-script@v8.0.0
+        env:
+          OFFICIAL_REVIEWERS: ${{ vars.OFFICIAL_REVIEWERS }}
+        with:
+          script: |
+            const allowed = new Set(
+              (process.env.OFFICIAL_REVIEWERS || '')
+                .split(',')
+                .map((name) => name.trim().toLowerCase())
+                .filter(Boolean)
+            );
+            if (allowed.size === 0) {
+              core.setFailed('Configure the OFFICIAL_REVIEWERS repository variable before accepting Official mods.');
+              return;
+            }
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const approved = reviews.some(
+              (review) => review.state === 'APPROVED' && allowed.has(review.user.login.toLowerCase())
+            );
+            if (!approved) core.setFailed('An approved Official reviewer is required.');

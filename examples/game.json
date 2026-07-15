@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "appId": 123456,
+  "name": { "en": "Neutral Example Game", "de": "Neutrales Beispielspiel" },
+  "mods": [
+    {
+      "modId": "example.accessibility",
+      "file": "mods/example.accessibility.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

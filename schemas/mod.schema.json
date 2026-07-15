@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/NicDev-Studios/GameTweaks-Games/schemas/mod.schema.json",
+  "title": "GameTweaks mod definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "modId", "guid", "version", "official", "name", "description", "integration", "compatibility", "release", "config"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "modId": { "$ref": "#/$defs/id" },
+    "guid": { "type": "string", "minLength": 3, "maxLength": 96, "pattern": "^[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "official": { "type": "boolean" },
+    "name": { "$ref": "#/$defs/localizedText" },
+    "description": { "$ref": "#/$defs/localizedText" },
+    "integration": { "enum": ["agent", "configFile"] },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "architectures"],
+      "properties": {
+        "runtime": { "enum": ["mono", "il2Cpp"] },
+        "architectures": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "enum": ["x86", "x64"] } },
+        "minimumAgentVersion": { "type": "string" }
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tag", "asset", "sha256"],
+      "properties": {
+        "tag": { "$ref": "#/$defs/releasePart" },
+        "asset": { "type": "string", "pattern": "^[A-Za-z0-9._+-]+\\.zip$", "maxLength": 180 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "dependencies": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/dependency" } },
+    "conflicts": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "config": { "type": "array", "maxItems": 512, "items": { "$ref": "#/$defs/configField" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 96, "pattern": "^[A-Za-z0-9._-]+$" },
+    "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+    "releasePart": { "type": "string", "minLength": 1, "maxLength": 180, "pattern": "^[A-Za-z0-9._+-]+$" },
+    "localizedText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["en"],
+      "properties": { "en": { "type": "string", "minLength": 1, "maxLength": 512 }, "de": { "type": "string", "minLength": 1, "maxLength": 512 } }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modId", "minimumVersion"],
+      "properties": { "modId": { "$ref": "#/$defs/id" }, "minimumVersion": { "type": "string" } }
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label"],
+      "properties": { "value": { "type": "string", "maxLength": 128 }, "label": { "$ref": "#/$defs/localizedText" } }
+    },
+    "baseField": {
+      "type": "object",
+      "required": ["id", "section", "key", "label", "applyMode"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "section": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "key": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "label": { "$ref": "#/$defs/localizedText" },
+        "description": { "$ref": "#/$defs/localizedText" },
+        "applyMode": { "enum": ["live", "restartRequired", "nextLaunch"] }
+      }
+    },
+    "configField": {
+      "allOf": [
+        { "$ref": "#/$defs/baseField" },
+        {
+          "oneOf": [
+            { "properties": { "control": { "const": "boolean" }, "default": { "type": "boolean" }, "display": { "enum": ["switch", "checkbox"] } }, "required": ["control", "default"] },
+            { "properties": { "control": { "const": "string" }, "default": { "type": "string" }, "maxLength": { "type": "integer", "minimum": 1, "maximum": 65535 } }, "required": ["control", "default", "maxLength"] },
+            { "properties": { "control": { "enum": ["integer", "decimal"] }, "default": { "type": "number" }, "min": { "type": "number" }, "max": { "type": "number" }, "step": { "type": "number", "exclusiveMinimum": 0 } }, "required": ["control", "default", "min", "max", "step"] },
+            { "properties": { "control": { "const": "singleSelect" }, "default": { "type": "string" }, "options": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/option" } }, "display": { "enum": ["dropdown", "radio"] } }, "required": ["control", "default", "options"] },
+            { "properties": { "control": { "const": "multiSelect" }, "default": { "type": "array", "items": { "type": "string" } }, "options": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/option" } } }, "required": ["control", "default", "options"] }
+          ]
+        }
+      ]
+    }
+  }
+}
+

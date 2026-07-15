@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "modId": "example.accessibility",
+  "guid": "dev.example.accessibility",
+  "version": "1.0.0",
+  "official": false,
+  "name": { "en": "Neutral Accessibility Example" },
+  "description": { "en": "Schema example only; this is not a downloadable mod." },
+  "integration": "agent",
+  "compatibility": {
+    "runtime": "mono",
+    "architectures": ["x64"],
+    "minimumAgentVersion": "0.1.0"
+  },
+  "release": {
+    "tag": "example-v1.0.0",
+    "asset": "example.accessibility.zip",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "config": [
+    {
+      "control": "boolean",
+      "id": "highContrast",
+      "section": "Accessibility",
+      "key": "HighContrast",
+      "label": { "en": "High contrast" },
+      "default": false,
+      "display": "switch",
+      "applyMode": "live"
+    }
+  ]
+}
