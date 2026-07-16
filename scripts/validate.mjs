@@ -50,7 +50,10 @@ for (const entry of entries) {
   }
 
   const modsRoot = join(gameRoot, 'mods');
-  const modFiles = await readdir(modsRoot, { withFileTypes: true });
+  const modFiles = await readdir(modsRoot, { withFileTypes: true }).catch((error) => {
+    if (error.code === 'ENOENT' && referenced.size === 0) return [];
+    throw error;
+  });
   for (const modFile of modFiles) {
     const relative = `mods/${modFile.name}`;
     if (!modFile.isFile() || !referenced.has(relative)) throw new Error(`Unreferenced mod file: ${relative}`);

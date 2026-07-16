@@ -7,12 +7,15 @@ Create one directory named after the decimal Steam App ID:
 ```text
 games/123456/
   game.json
-  mods/
+  mods/                    # only when the game has catalog mods
     example.mod.json
 ```
 
 `game.json` is only an index. Every mod has a separate definition. The SHA-256
 in the index must match the exact bytes of that mod JSON file.
+
+A game can be added before any mods exist. In that case, set `mods` to an empty
+array and do not create an empty `mods/` directory.
 
 ## Game index
 
@@ -28,6 +31,17 @@ in the index must match the exact bytes of that mod JSON file.
       "sha256": "<64 lowercase hexadecimal characters>"
     }
   ]
+}
+```
+
+For a game without catalog mods, use:
+
+```json
+{
+  "schemaVersion": 1,
+  "appId": 123456,
+  "name": { "en": "Example Game" },
+  "mods": []
 }
 ```
 
