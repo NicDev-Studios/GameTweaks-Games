@@ -154,6 +154,13 @@ def validate_archive(path: Path) -> None:
             if name in paths:
                 fail(f"release ZIP contains a duplicate entry: {name}")
             paths.add(name)
+            basename = parts[-1].lower()
+            if (
+                not entry.is_dir()
+                and basename.startswith("gametweaks.agent.")
+                and basename.endswith(".dll")
+            ):
+                fail(f"release ZIP contains a shared Agent assembly: {name}")
             total += entry.file_size
             if total > MAX_UNCOMPRESSED_BYTES:
                 fail("release ZIP exceeds the uncompressed size limit")

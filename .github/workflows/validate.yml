@@ -38,8 +38,8 @@ jobs:
       - name: Validate paths, references and digests
         run: node scripts/validate.mjs
 
-      - name: Test release archive validation
-        run: python -m unittest scripts/test_verify_release_assets.py
+      - name: Test schemas and release archive validation
+        run: python -m unittest scripts/test_mod_schema.py scripts/test_verify_release_assets.py
 
       - name: Verify changed upstream release assets
         if: github.event_name != 'push'

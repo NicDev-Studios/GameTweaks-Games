@@ -37,7 +37,8 @@ GameTweaks.
 Read [Adding a game and mods](docs/adding-a-game.md) for the complete format and
 [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. JSON Schemas
 and neutral examples are available in [`schemas/`](schemas/) and
-[`examples/`](examples/).
+[`examples/`](examples/). Agent-integrated mod authors should also follow the
+[Agent SDK guide](https://github.com/NicDev-Studios/GameTweaks/blob/main/agent/SDK.md).
 
 ## Safety
 

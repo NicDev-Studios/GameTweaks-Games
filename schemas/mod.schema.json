@@ -9,7 +9,7 @@
     "schemaVersion": { "const": 1 },
     "modId": { "$ref": "#/$defs/id" },
     "guid": { "type": "string", "minLength": 3, "maxLength": 96, "pattern": "^[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)+$" },
-    "version": { "type": "string", "maxLength": 64, "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "version": { "$ref": "#/$defs/semver" },
     "official": { "type": "boolean" },
     "name": { "$ref": "#/$defs/localizedText" },
     "description": { "$ref": "#/$defs/localizedText" },
@@ -21,7 +21,7 @@
       "properties": {
         "runtime": { "enum": ["mono", "il2Cpp"] },
         "architectures": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "enum": ["x86", "x64"] } },
-        "minimumAgentVersion": { "type": "string" }
+        "minimumAgentVersion": { "$ref": "#/$defs/semver" }
       }
     },
     "networkAccess": { "$ref": "#/$defs/networkAccess" },
@@ -43,6 +43,11 @@
   },
   "$defs": {
     "id": { "type": "string", "minLength": 1, "maxLength": 96, "pattern": "^[A-Za-z0-9._-]+$" },
+    "semver": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
     "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
     "sha256Lower": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "repository": { "type": "string", "maxLength": 201, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$" },
@@ -107,7 +112,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["modId", "minimumVersion"],
-      "properties": { "modId": { "$ref": "#/$defs/id" }, "minimumVersion": { "type": "string" } }
+      "properties": { "modId": { "$ref": "#/$defs/id" }, "minimumVersion": { "$ref": "#/$defs/semver" } }
     },
     "option": {
       "type": "object",
@@ -149,6 +154,24 @@
         "required": ["official"]
       },
       "then": { "required": ["source"] }
+    },
+    {
+      "if": {
+        "properties": { "integration": { "const": "agent" } },
+        "required": ["integration"]
+      },
+      "then": {
+        "properties": {
+          "compatibility": { "required": ["minimumAgentVersion"] }
+        }
+      },
+      "else": {
+        "properties": {
+          "compatibility": {
+            "not": { "required": ["minimumAgentVersion"] }
+          }
+        }
+      }
     }
   ]
 }

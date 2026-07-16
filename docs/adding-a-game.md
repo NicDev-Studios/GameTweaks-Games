@@ -135,6 +135,10 @@ approving the current catalog pull-request commit.
 - `configFile`: GameTweaks edits the declared BepInEx config while the game is closed.
 - `agent`: the shared GameTweaks Agent is installed automatically and the mod can register live values through the SDK.
 
+An Agent integration must set `compatibility.minimumAgentVersion` to the oldest
+Agent version tested with that mod release. A config-file integration must not
+set it.
+
 Dependencies are installed in the same transaction. Conflicts block the
 transaction. Removing a dependency is blocked while another installed mod
 still needs it.
@@ -157,9 +161,34 @@ with a different contract, GameTweaks blocks that field.
 
 ## Agent SDK
 
-Reference `GameTweaks.Agent.Abstractions` from the `agent/` source project.
-Register the mod once, then register its existing BepInEx config entries. The
-Agent only supports configuration and status messages. It cannot start
+Install the published
+[`GameTweaks.Agent.Abstractions`](https://www.nuget.org/packages/GameTweaks.Agent.Abstractions)
+package as a private compile-only dependency:
+
+```xml
+<PackageReference Include="GameTweaks.Agent.Abstractions" Version="0.1.0">
+  <IncludeAssets>compile</IncludeAssets>
+  <PrivateAssets>all</PrivateAssets>
+</PackageReference>
+```
+
+Declare a hard BepInEx dependency with the same minimum version:
+
+```csharp
+[BepInDependency("dev.gametweaks.agent", "0.1.0")]
+```
+
+Follow the
+[complete Agent SDK guide](https://github.com/NicDev-Studios/GameTweaks/blob/main/agent/SDK.md)
+for lifecycle-safe registration, bindings, and a buildable plugin example.
+`modId` must match `ModRegistration.ModId`, `guid` must match the
+`BepInPlugin` GUID, and registered fields must match catalog fields with the
+same ID exactly.
+
+Do not put `GameTweaks.Agent.Abstractions.dll` or any other
+`GameTweaks.Agent.*.dll` in the mod ZIP. The shared runtime is installed and
+owned by GameTweaks, and archives containing those assemblies are rejected.
+The Agent only supports configuration and status messages. It cannot start
 processes, execute commands, access arbitrary paths, or bypass anti-cheat.
 
 ## Contributor workflow

@@ -60,6 +60,27 @@ class ReleaseArchiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no plugin DLL"):
             validate_archive(self.archive([("readme.txt", b"text")]))
 
+    def test_rejects_shared_agent_assemblies(self) -> None:
+        for name in (
+            "lib/GameTweaks.Agent.Abstractions.dll",
+            "lib/GAMETWEAKS.AGENT.CORE.DLL",
+            "lib\\GameTweaks.Agent.Mono.dll",
+            "lib/GameTweaks.Agent.FutureHost.dll",
+        ):
+            with self.subTest(name=name), self.assertRaisesRegex(
+                ValueError, "shared Agent assembly"
+            ):
+                validate_archive(
+                    self.archive([("plugin.dll", b"plugin"), (name, b"agent")])
+                )
+
+    def test_accepts_a_normal_sdk_reference_in_plugin_bytes(self) -> None:
+        validate_archive(
+            self.archive(
+                [("plugin.dll", b"reference: GameTweaks.Agent.Abstractions")]
+            )
+        )
+
     def test_accepts_network_free_plugin_declaration(self) -> None:
         scan_network_access(
             self.archive([("plugin.dll", b"ordinary plugin bytes")]),
