@@ -4,7 +4,7 @@
   "title": "GameTweaks mod definition",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "modId", "guid", "version", "official", "name", "description", "integration", "compatibility", "release", "config"],
+  "required": ["schemaVersion", "modId", "guid", "version", "official", "name", "description", "integration", "compatibility", "networkAccess", "release", "config"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "modId": { "$ref": "#/$defs/id" },
@@ -24,6 +24,7 @@
         "minimumAgentVersion": { "type": "string" }
       }
     },
+    "networkAccess": { "$ref": "#/$defs/networkAccess" },
     "release": {
       "type": "object",
       "additionalProperties": false,
@@ -44,6 +45,41 @@
     "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
     "sha256Lower": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "repository": { "type": "string", "maxLength": 201, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$" },
+    "networkHost": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 253,
+      "pattern": "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z][a-z0-9-]{1,62}$|^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"
+    },
+    "networkAccess": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["usesNetwork", "allowedHosts"],
+          "properties": {
+            "usesNetwork": { "const": false },
+            "allowedHosts": { "type": "array", "maxItems": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["usesNetwork", "allowedHosts", "purpose"],
+          "properties": {
+            "usesNetwork": { "const": true },
+            "allowedHosts": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/networkHost" }
+            },
+            "purpose": { "$ref": "#/$defs/localizedText" }
+          }
+        }
+      ]
+    },
     "releasePart": { "type": "string", "minLength": 1, "maxLength": 180, "pattern": "^[A-Za-z0-9._+-]+$" },
     "localizedText": {
       "type": "object",

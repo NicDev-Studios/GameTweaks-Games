@@ -6,7 +6,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import http.client
+import ipaddress
 import json
+import os
 import re
 import shutil
 import ssl
@@ -33,6 +35,34 @@ RELEASE_PART = re.compile(r"^[A-Za-z0-9._+-]{1,180}$")
 ASSET = re.compile(r"^[A-Za-z0-9._+-]+\.zip$")
 IDENTIFIER = re.compile(r"^[A-Za-z0-9._-]{1,96}$")
 SHA256 = re.compile(r"^[a-f0-9]{64}$")
+NETWORK_HOST = re.compile(
+    r"^(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)\.)+[a-z][a-z0-9-]{1,62}$"
+)
+URL = re.compile(r"(?i)\b(?:https?|wss?)://[^\s\x00\"'<>]{1,2048}")
+BARE_DOMAIN = re.compile(
+    r"(?<![A-Za-z0-9_.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+"
+    r"[a-z][a-z0-9-]{1,62}(?![A-Za-z0-9_.-])"
+)
+IPV4 = re.compile(r"(?<![0-9.])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9.])")
+PRINTABLE_ASCII = re.compile(rb"[\x20-\x7e]{4,}")
+PRINTABLE_UTF16_LE = re.compile(rb"(?:[\x20-\x7e]\x00){4,}")
+NETWORK_API_INDICATORS = {
+    "System.Net.Http": (b"System.Net.Http",),
+    "System.Net.Sockets": (b"System.Net.Sockets",),
+    "HttpClient": (b"HttpClient",),
+    "HttpWebRequest": (b"HttpWebRequest",),
+    "WebRequest": (b"WebRequest",),
+    "WebClient": (b"WebClient",),
+    "TcpClient": (b"TcpClient",),
+    "UdpClient": (b"UdpClient",),
+    "ClientWebSocket": (b"ClientWebSocket",),
+    "Dns.GetHost": (b"GetHostAddresses", b"GetHostEntry"),
+    "WinHTTP": (b"winhttp.dll", b"WinHttpOpen", b"WinHttpConnect"),
+    "WinINet": (b"wininet.dll", b"InternetOpen", b"InternetConnect"),
+    "URLMon": (b"urlmon.dll", b"URLDownloadToFile"),
+    "libcurl": (b"libcurl", b"curl_easy_init", b"curl_easy_perform"),
+}
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 
 def fail(message: str) -> None:
@@ -130,6 +160,142 @@ def validate_archive(path: Path) -> None:
             fail("release ZIP contains no plugin DLL")
 
 
+def parse_network_access(data: dict, definition_path: Path) -> tuple[bool, set[str]]:
+    network = data.get("networkAccess")
+    if not isinstance(network, dict) or set(network) - {"usesNetwork", "allowedHosts", "purpose"}:
+        fail(f"invalid networkAccess declaration in {definition_path}")
+    uses_network = network.get("usesNetwork")
+    allowed = network.get("allowedHosts")
+    if not isinstance(uses_network, bool) or not isinstance(allowed, list):
+        fail(f"invalid networkAccess declaration in {definition_path}")
+    if any(not isinstance(host, str) for host in allowed):
+        fail(f"invalid network host in {definition_path}")
+    normalized = [host.lower() for host in allowed]
+    if len(normalized) != len(set(normalized)) or len(normalized) > 32:
+        fail(f"duplicate or excessive network hosts in {definition_path}")
+    for host in normalized:
+        if host in LOCAL_HOSTS or not valid_remote_host(host):
+            fail(f"invalid remote network host in {definition_path}: {host}")
+    purpose = network.get("purpose")
+    if uses_network:
+        if not normalized or not valid_localized_purpose(purpose):
+            fail(f"network access needs allowedHosts and a purpose in {definition_path}")
+    elif normalized or purpose is not None:
+        fail(f"networkAccess must be empty when usesNetwork is false in {definition_path}")
+    return uses_network, set(normalized)
+
+
+def valid_remote_host(host: str) -> bool:
+    if NETWORK_HOST.fullmatch(host):
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return address.version == 4 and not address.is_loopback and not address.is_unspecified
+
+
+def valid_localized_purpose(value: object) -> bool:
+    if not isinstance(value, dict) or set(value) - {"en", "de"}:
+        return False
+    if not isinstance(value.get("en"), str) or not value["en"].strip():
+        return False
+    return all(isinstance(text, str) and 0 < len(text.strip()) <= 512 for text in value.values())
+
+
+def scan_network_access(
+    archive_path: Path,
+    uses_network: bool,
+    allowed_hosts: set[str],
+) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    api_findings: dict[str, set[str]] = {}
+    host_findings: dict[str, set[str]] = {}
+    with zipfile.ZipFile(archive_path) as archive:
+        for entry in archive.infolist():
+            if entry.is_dir() or not entry.filename.lower().endswith(".dll"):
+                continue
+            binary = archive.read(entry)
+            apis = detect_network_apis(binary)
+            hosts = detect_network_hosts(binary)
+            if apis:
+                api_findings[entry.filename] = apis
+            if hosts:
+                host_findings[entry.filename] = hosts
+
+    detected_hosts = set().union(*host_findings.values()) if host_findings else set()
+    if not uses_network and api_findings:
+        fail("network APIs were detected but networkAccess.usesNetwork is false: " + format_findings(api_findings))
+    if not uses_network and detected_hosts:
+        fail("remote hosts were detected but networkAccess.usesNetwork is false: " + format_findings(host_findings))
+    undeclared = detected_hosts - allowed_hosts
+    if undeclared:
+        fail("undeclared remote hosts were detected: " + ", ".join(sorted(undeclared)))
+
+    print_network_report(api_findings, host_findings, allowed_hosts)
+    return api_findings, host_findings
+
+
+def detect_network_apis(binary: bytes) -> set[str]:
+    findings = set()
+    for label, indicators in NETWORK_API_INDICATORS.items():
+        if any(indicator in binary or utf16_le(indicator) in binary for indicator in indicators):
+            findings.add(label)
+    return findings
+
+
+def detect_network_hosts(binary: bytes) -> set[str]:
+    strings = [match.group().decode("ascii", "ignore") for match in PRINTABLE_ASCII.finditer(binary)]
+    strings.extend(
+        match.group().decode("utf-16-le", "ignore")
+        for match in PRINTABLE_UTF16_LE.finditer(binary)
+    )
+    hosts = set()
+    for string in strings:
+        for match in URL.finditer(string):
+            host = urlsplit(match.group()).hostname
+            if host:
+                add_remote_host(hosts, host.lower())
+        for match in BARE_DOMAIN.finditer(string):
+            add_remote_host(hosts, match.group().lower())
+        for match in IPV4.finditer(string):
+            add_remote_host(hosts, match.group())
+    return hosts
+
+
+def add_remote_host(hosts: set[str], host: str) -> None:
+    if host in LOCAL_HOSTS:
+        return
+    if valid_remote_host(host):
+        hosts.add(host)
+
+
+def utf16_le(value: bytes) -> bytes:
+    return b"".join(bytes((byte, 0)) for byte in value)
+
+
+def format_findings(findings: dict[str, set[str]]) -> str:
+    return "; ".join(
+        f"{path}: {', '.join(sorted(values))}" for path, values in sorted(findings.items())
+    )
+
+
+def print_network_report(
+    api_findings: dict[str, set[str]],
+    host_findings: dict[str, set[str]],
+    allowed_hosts: set[str],
+) -> None:
+    if api_findings:
+        print(f"  Network APIs: {format_findings(api_findings)}")
+    if host_findings:
+        print(f"  Remote hosts: {format_findings(host_findings)}")
+    if not api_findings and not host_findings:
+        print("  Network scan: no known APIs or remote hosts detected")
+    if allowed_hosts:
+        print(f"  Declared hosts: {', '.join(sorted(allowed_hosts))}")
+    if os.environ.get("GITHUB_ACTIONS") == "true" and (api_findings or host_findings):
+        print("::notice title=Mod network scan::" + format_findings({**api_findings, **host_findings}))
+
+
 def definitions(root: Path, selected: list[str]) -> list[Path]:
     if not selected:
         return sorted(root.glob("games/*/mods/*.json"))
@@ -152,6 +318,7 @@ def verify(definition_path: Path, output_dir: Path | None) -> tuple[str, str, Pa
     tag = release.get("tag", "")
     asset = release.get("asset", "")
     expected = release.get("sha256", "")
+    uses_network, allowed_hosts = parse_network_access(data, definition_path)
     if not IDENTIFIER.fullmatch(mod_id) or not RELEASE_PART.fullmatch(version):
         fail(f"invalid mod ID or version in {definition_path}")
     if not REPOSITORY.fullmatch(repository):
@@ -175,6 +342,7 @@ def verify(definition_path: Path, output_dir: Path | None) -> tuple[str, str, Pa
         if actual != expected:
             fail(f"release digest mismatch in {definition_path}: expected {expected}, got {actual}")
         validate_archive(archive)
+        scan_network_access(archive, uses_network, allowed_hosts)
         if output_dir is not None:
             target_tag = f"mod-{mod_id}-v{version}"
             if not RELEASE_PART.fullmatch(target_tag):

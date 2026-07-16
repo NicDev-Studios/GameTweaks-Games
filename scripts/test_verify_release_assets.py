@@ -9,7 +9,14 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from verify_release_assets import validate_archive, validate_url, verify  # noqa: E402
+from verify_release_assets import (  # noqa: E402
+    detect_network_apis,
+    detect_network_hosts,
+    scan_network_access,
+    validate_archive,
+    validate_url,
+    verify,
+)
 
 
 class ReleaseArchiveTests(unittest.TestCase):
@@ -51,6 +58,41 @@ class ReleaseArchiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no plugin DLL"):
             validate_archive(self.archive([("readme.txt", b"text")]))
 
+    def test_accepts_network_free_plugin_declaration(self) -> None:
+        scan_network_access(
+            self.archive([("plugin.dll", b"ordinary plugin bytes")]),
+            False,
+            set(),
+        )
+
+    def test_rejects_undeclared_network_api(self) -> None:
+        archive = self.archive([("plugin.dll", b"System.Net.Http\0HttpClient")])
+        with self.assertRaisesRegex(ValueError, "network APIs were detected"):
+            scan_network_access(archive, False, set())
+
+    def test_rejects_undeclared_remote_host(self) -> None:
+        archive = self.archive([("plugin.dll", b"https://telemetry.example.com/events")])
+        with self.assertRaisesRegex(ValueError, "usesNetwork is false"):
+            scan_network_access(archive, False, set())
+
+    def test_accepts_declared_api_and_host(self) -> None:
+        archive = self.archive(
+            [("plugin.dll", b"System.Net.Http HttpClient https://api.example.com/v1")]
+        )
+        apis, hosts = scan_network_access(archive, True, {"api.example.com"})
+        self.assertIn("HttpClient", apis["plugin.dll"])
+        self.assertEqual(hosts["plugin.dll"], {"api.example.com"})
+
+    def test_rejects_host_missing_from_allowlist(self) -> None:
+        archive = self.archive([("plugin.dll", b"https://other.example.com/v1")])
+        with self.assertRaisesRegex(ValueError, "undeclared remote hosts"):
+            scan_network_access(archive, True, {"api.example.com"})
+
+    def test_detects_utf16_network_metadata(self) -> None:
+        binary = "System.Net.Sockets https://api.example.com".encode("utf-16-le")
+        self.assertIn("System.Net.Sockets", detect_network_apis(binary))
+        self.assertEqual(detect_network_hosts(binary), {"api.example.com"})
+
     def test_rejects_non_github_download_hosts(self) -> None:
         with self.assertRaisesRegex(ValueError, "untrusted release redirect"):
             validate_url("https://example.com/mod.zip")
@@ -66,6 +108,7 @@ class ReleaseArchiveTests(unittest.TestCase):
             "{"
             '"modId":"author.mod",'
             '"version":"1.2.3",'
+            '"networkAccess":{"usesNetwork":false,"allowedHosts":[]},'
             '"release":{'
             '"repository":"author/mod",'
             '"tag":"v1.2.3",'

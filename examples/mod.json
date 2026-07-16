@@ -12,6 +12,10 @@
     "architectures": ["x64"],
     "minimumAgentVersion": "0.1.0"
   },
+  "networkAccess": {
+    "usesNetwork": false,
+    "allowedHosts": []
+  },
   "release": {
     "repository": "example/example-mod",
     "tag": "example-v1.0.0",
