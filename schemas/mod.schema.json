@@ -25,6 +25,7 @@
       }
     },
     "networkAccess": { "$ref": "#/$defs/networkAccess" },
+    "source": { "$ref": "#/$defs/source" },
     "release": {
       "type": "object",
       "additionalProperties": false,
@@ -80,6 +81,21 @@
         }
       ]
     },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "tag", "commit", "workflow"],
+      "properties": {
+        "repository": { "$ref": "#/$defs/repository" },
+        "tag": { "$ref": "#/$defs/releasePart" },
+        "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "workflow": {
+          "type": "string",
+          "pattern": "^\\.github/workflows/[A-Za-z0-9._-]+\\.ya?ml$",
+          "maxLength": 180
+        }
+      }
+    },
     "releasePart": { "type": "string", "minLength": 1, "maxLength": 180, "pattern": "^[A-Za-z0-9._+-]+$" },
     "localizedText": {
       "type": "object",
@@ -125,5 +141,14 @@
         }
       ]
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "official": { "const": true } },
+        "required": ["official"]
+      },
+      "then": { "required": ["source"] }
+    }
+  ]
 }

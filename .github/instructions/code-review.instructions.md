@@ -19,7 +19,11 @@ excludeAgent: "cloud-agent"
 - Review every configuration default against its declared type, allowed values,
   bounds, step, display, and apply mode.
 - Treat a new `official: true` value without the required maintainer approval as
-  blocking. Official status must not change IPC permissions or trust boundaries.
+  blocking. For every changed Official definition, verify that the public source
+  repository and tag match the release, the tag resolves to the declared commit,
+  and the declared GitHub-hosted workflow attested the exact ZIP. Review the
+  source diff and build workflow before approving the current PR head. Official
+  status must not change IPC permissions or trust boundaries.
 - Flag fabricated, unverifiable, generic, or contradictory catalog data. Do not
   accuse contributors of using AI based on prose style. The explicit select-all
   attention checkbox being checked is an objective reason for manual review.

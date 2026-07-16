@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "modId": "example.official",
+  "guid": "dev.example.official",
+  "version": "1.0.0",
+  "official": true,
+  "name": { "en": "Neutral Official Example" },
+  "description": { "en": "Schema example only; this is not a downloadable mod." },
+  "integration": "configFile",
+  "compatibility": {
+    "runtime": "mono",
+    "architectures": ["x64"]
+  },
+  "networkAccess": {
+    "usesNetwork": false,
+    "allowedHosts": []
+  },
+  "source": {
+    "repository": "example/example-mod",
+    "tag": "example-v1.0.0",
+    "commit": "0000000000000000000000000000000000000000",
+    "workflow": ".github/workflows/release.yml"
+  },
+  "release": {
+    "repository": "example/example-mod",
+    "tag": "example-v1.0.0",
+    "asset": "example.official.zip",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "config": []
+}

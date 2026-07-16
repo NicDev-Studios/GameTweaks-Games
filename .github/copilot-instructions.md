@@ -17,6 +17,9 @@ validation.
   each referenced mod JSON file.
 - A mod release must identify the real public upstream GitHub repository, tag,
   and ZIP asset. Its SHA-256 must match those exact bytes.
+- Official mods require a matching public source repository and tag, an exact
+  full commit SHA, and the GitHub Actions workflow that built and attested the
+  ZIP. Never invent or weaken source provenance fields.
 - Never add arbitrary URLs or non-GitHub release hosts. The protected promotion
   workflow mirrors verified bytes into the official catalog release
   `mod-<mod-id>-v<version>` without executing or rebuilding them.

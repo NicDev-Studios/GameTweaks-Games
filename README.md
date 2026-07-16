@@ -17,7 +17,8 @@ app.
 
 Mods marked **Official** have been reviewed by GameTweaks maintainers. Community
 mods use the same validation and installation protections, but do not carry the
-Official badge.
+Official badge. Official mods must additionally have public source code and a
+GitHub-attested release build tied to an exact source tag, commit, and workflow.
 
 ## Add a game or mod
 
@@ -28,9 +29,10 @@ Contributions are welcome. To submit a mod:
 3. Reference it from the game's `game.json`.
 4. Open a pull request with the release and compatibility evidence.
 
-The catalog checks definitions, checksums, and archive safety automatically.
-Approved packages are copied into a protected catalog release before they
-become available in GameTweaks.
+The catalog checks definitions, checksums, archive safety, declared network
+access, and supplied build provenance automatically. Approved packages are
+copied into a protected catalog release before they become available in
+GameTweaks.
 
 Read [Adding a game and mods](docs/adding-a-game.md) for the complete format and
 [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. JSON Schemas

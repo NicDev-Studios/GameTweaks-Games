@@ -1,4 +1,5 @@
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from verify_release_assets import (  # noqa: E402
     detect_network_apis,
     detect_network_hosts,
+    parse_source_provenance,
     scan_network_access,
     validate_archive,
     validate_url,
@@ -108,6 +110,7 @@ class ReleaseArchiveTests(unittest.TestCase):
             "{"
             '"modId":"author.mod",'
             '"version":"1.2.3",'
+            '"official":false,'
             '"networkAccess":{"usesNetwork":false,"allowedHosts":[]},'
             '"release":{'
             '"repository":"author/mod",'
@@ -128,6 +131,82 @@ class ReleaseArchiveTests(unittest.TestCase):
         self.assertEqual(tag, "mod-author.mod-v1.2.3")
         self.assertEqual(asset, "author.mod.zip")
         self.assertEqual(staged.read_bytes(), source.read_bytes())
+
+    def test_official_mod_requires_source_provenance(self) -> None:
+        with self.assertRaisesRegex(ValueError, "no source provenance"):
+            parse_source_provenance(
+                {"official": True},
+                {"repository": "author/mod", "tag": "v1.0.0"},
+                Path("official.json"),
+            )
+
+    def test_source_must_match_release_repository_and_tag(self) -> None:
+        with self.assertRaisesRegex(ValueError, "invalid source provenance"):
+            parse_source_provenance(
+                {
+                    "official": True,
+                    "source": {
+                        "repository": "other/mod",
+                        "tag": "v1.0.0",
+                        "commit": "a" * 40,
+                        "workflow": ".github/workflows/release.yml",
+                    },
+                },
+                {"repository": "author/mod", "tag": "v1.0.0"},
+                Path("official.json"),
+            )
+
+    def test_verifies_official_tag_commit_and_attestation(self) -> None:
+        source = self.archive([("plugin.dll", b"plugin")])
+        digest = sha256(source.read_bytes()).hexdigest()
+        commit = "a" * 40
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        definition = root / "official.json"
+        definition.write_text(
+            "{"
+            '"modId":"author.mod",'
+            '"version":"1.2.3",'
+            '"official":true,'
+            '"networkAccess":{"usesNetwork":false,"allowedHosts":[]},'
+            '"source":{'
+            '"repository":"author/mod",'
+            '"tag":"v1.2.3",'
+            f'"commit":"{commit}",'
+            '"workflow":".github/workflows/release.yml"},'
+            '"release":{'
+            '"repository":"author/mod",'
+            '"tag":"v1.2.3",'
+            '"asset":"author.mod.zip",'
+            f'"sha256":"{digest}"'
+            "}}",
+            encoding="utf-8",
+        )
+
+        def copy_download(_url: str, destination: Path) -> str:
+            destination.write_bytes(source.read_bytes())
+            return digest
+
+        completed = [
+            subprocess.CompletedProcess([], 0, stdout=f"{commit}\n", stderr=""),
+            subprocess.CompletedProcess([], 0, stdout="", stderr=""),
+        ]
+        with (
+            patch("verify_release_assets.download", side_effect=copy_download),
+            patch("verify_release_assets.subprocess.run", side_effect=completed) as run,
+        ):
+            verify(definition, None)
+
+        api_command = run.call_args_list[0].args[0]
+        attestation_command = run.call_args_list[1].args[0]
+        self.assertEqual(api_command[:2], ["gh", "api"])
+        self.assertIn(f"repos/author/mod/commits/v1.2.3", api_command)
+        self.assertEqual(attestation_command[:3], ["gh", "attestation", "verify"])
+        self.assertIn("author/mod/.github/workflows/release.yml", attestation_command)
+        self.assertIn(commit, attestation_command)
+        self.assertIn("refs/tags/v1.2.3", attestation_command)
+        self.assertIn("--deny-self-hosted-runners", attestation_command)
 
 
 if __name__ == "__main__":

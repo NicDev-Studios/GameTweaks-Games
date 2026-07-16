@@ -15,6 +15,24 @@ const gamesRoot = join(catalogRoot, 'games');
 const entries = await readdir(gamesRoot, { withFileTypes: true });
 const sourcePattern = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/;
 const releasePartPattern = /^[A-Za-z0-9._+-]+$/;
+const commitPattern = /^[a-f0-9]{40}$/;
+const workflowPattern = /^\.github\/workflows\/[A-Za-z0-9._-]+\.ya?ml$/;
+
+function validateSource(definition, expected) {
+  const source = definition.source;
+  if (definition.official && !source) {
+    throw new Error(`Official mod has no source provenance in ${expected}`);
+  }
+  if (!source) return;
+  if (!sourcePattern.test(source.repository) ||
+      !releasePartPattern.test(source.tag) || source.tag.length > 180 ||
+      !commitPattern.test(source.commit) ||
+      !workflowPattern.test(source.workflow) || source.workflow.length > 180 ||
+      source.repository !== definition.release.repository ||
+      source.tag !== definition.release.tag) {
+    throw new Error(`Invalid source provenance in ${expected}`);
+  }
+}
 
 for (const entry of entries) {
   if (entry.name === '.gitkeep') continue;
@@ -47,6 +65,7 @@ for (const entry of entries) {
         !/^[a-f0-9]{64}$/.test(release.sha256)) {
       throw new Error(`Invalid upstream release in ${expected}`);
     }
+    validateSource(definition, expected);
   }
 
   const modsRoot = join(gameRoot, 'mods');

@@ -12,6 +12,10 @@ from a reproducible inspection of the actual game or plugin.
 - Keep examples outside `games/`; placeholder catalog entries are forbidden.
 - Keep `official` false unless a GameTweaks maintainer explicitly reviews it.
 - Publish the final ZIP in a public release of the mod's real GitHub repository.
+- Official mods must keep their source public and declare the exact release tag,
+  source commit, and GitHub Actions workflow that built and attested the ZIP.
+- Do not manually upload or replace an Official ZIP. Build it on a GitHub-hosted
+  runner, generate GitHub build provenance, and publish it from that workflow.
 - Run `node scripts/validate.mjs`, `python scripts/verify_release_assets.py`, and
   the JSON Schema checks before submitting.
 - List the exact checks and hash commands you actually ran in the pull request.
@@ -20,6 +24,10 @@ Maintainers must run the protected **Promote mod assets** workflow for the pull
 request and confirm that it succeeds before merging. The workflow copies the
 verified upstream bytes into an immutable official catalog release; do not
 upload, replace, or rebuild mod ZIPs manually.
+
+For an Official mod, an allowed maintainer must review the public source diff
+and release workflow and approve the current pull-request commit. Earlier
+approvals do not carry across later changes.
 
 ## Automated assistance
 

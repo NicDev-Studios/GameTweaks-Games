@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify untrusted upstream mod ZIPs without extracting or executing them."""
+"""Verify untrusted mod ZIPs and declared source provenance without executing them."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import ssl
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -35,6 +36,8 @@ RELEASE_PART = re.compile(r"^[A-Za-z0-9._+-]{1,180}$")
 ASSET = re.compile(r"^[A-Za-z0-9._+-]+\.zip$")
 IDENTIFIER = re.compile(r"^[A-Za-z0-9._-]{1,96}$")
 SHA256 = re.compile(r"^[a-f0-9]{64}$")
+SOURCE_COMMIT = re.compile(r"^[a-f0-9]{40}$")
+WORKFLOW = re.compile(r"^\.github/workflows/[A-Za-z0-9._-]+\.ya?ml$")
 NETWORK_HOST = re.compile(
     r"^(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)\.)+[a-z][a-z0-9-]{1,62}$"
 )
@@ -185,6 +188,102 @@ def parse_network_access(data: dict, definition_path: Path) -> tuple[bool, set[s
     return uses_network, set(normalized)
 
 
+def parse_source_provenance(
+    data: dict,
+    release: dict,
+    definition_path: Path,
+) -> dict[str, str] | None:
+    official = data.get("official")
+    if not isinstance(official, bool):
+        fail(f"invalid official status in {definition_path}")
+    source = data.get("source")
+    if source is None:
+        if official:
+            fail(f"Official mod has no source provenance in {definition_path}")
+        return None
+    if not isinstance(source, dict) or set(source) != {
+        "repository",
+        "tag",
+        "commit",
+        "workflow",
+    }:
+        fail(f"invalid source provenance in {definition_path}")
+    repository = source.get("repository")
+    tag = source.get("tag")
+    commit = source.get("commit")
+    workflow = source.get("workflow")
+    if (
+        not isinstance(repository, str)
+        or not REPOSITORY.fullmatch(repository)
+        or not isinstance(tag, str)
+        or not RELEASE_PART.fullmatch(tag)
+        or not isinstance(commit, str)
+        or not SOURCE_COMMIT.fullmatch(commit)
+        or not isinstance(workflow, str)
+        or len(workflow) > 180
+        or not WORKFLOW.fullmatch(workflow)
+        or repository != release.get("repository")
+        or tag != release.get("tag")
+    ):
+        fail(f"invalid source provenance in {definition_path}")
+    return {
+        "repository": repository,
+        "tag": tag,
+        "commit": commit,
+        "workflow": workflow,
+    }
+
+
+def verify_source_provenance(archive: Path, source: dict[str, str]) -> None:
+    repository = source["repository"]
+    tag = source["tag"]
+    commit = source["commit"]
+    workflow = source["workflow"]
+    try:
+        resolved = subprocess.run(
+            [
+                "gh",
+                "api",
+                f"repos/{repository}/commits/{quote(tag, safe='')}",
+                "--jq",
+                ".sha",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        ).stdout.strip()
+        if resolved != commit:
+            fail("the declared source tag does not resolve to the declared commit")
+        subprocess.run(
+            [
+                "gh",
+                "attestation",
+                "verify",
+                str(archive),
+                "--repo",
+                repository,
+                "--signer-workflow",
+                f"{repository}/{workflow}",
+                "--source-digest",
+                commit,
+                "--source-ref",
+                f"refs/tags/{tag}",
+                "--deny-self-hosted-runners",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except FileNotFoundError:
+        fail("GitHub CLI is required to verify source provenance")
+    except subprocess.TimeoutExpired:
+        fail("source provenance verification timed out")
+    except subprocess.CalledProcessError:
+        fail("source provenance or artifact attestation verification failed")
+
+
 def valid_remote_host(host: str) -> bool:
     if NETWORK_HOST.fullmatch(host):
         return True
@@ -331,6 +430,7 @@ def verify(definition_path: Path, output_dir: Path | None) -> tuple[str, str, Pa
         fail(f"invalid upstream release in {definition_path}")
     if not SHA256.fullmatch(expected):
         fail(f"invalid release digest in {definition_path}")
+    source = parse_source_provenance(data, release, definition_path)
 
     url = (
         f"https://github.com/{repository}/releases/download/"
@@ -343,6 +443,8 @@ def verify(definition_path: Path, output_dir: Path | None) -> tuple[str, str, Pa
             fail(f"release digest mismatch in {definition_path}: expected {expected}, got {actual}")
         validate_archive(archive)
         scan_network_access(archive, uses_network, allowed_hosts)
+        if source is not None:
+            verify_source_provenance(archive, source)
         if output_dir is not None:
             target_tag = f"mod-{mod_id}-v{version}"
             if not RELEASE_PART.fullmatch(target_tag):

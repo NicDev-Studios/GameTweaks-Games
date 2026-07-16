@@ -59,11 +59,13 @@ jobs:
           mapfile -t games < <(find submission/games -mindepth 2 -maxdepth 2 -name game.json -type f -print)
           mapfile -t mods < <(find submission/games -mindepth 3 -maxdepth 3 -path '*/mods/*.json' -type f -print)
           check-jsonschema --schemafile schemas/game.schema.json examples/game.json "${games[@]}"
-          check-jsonschema --schemafile schemas/mod.schema.json examples/mod.json "${mods[@]}"
+          check-jsonschema --schemafile schemas/mod.schema.json examples/mod.json examples/official-mod.json "${mods[@]}"
           node scripts/validate.mjs --catalog-root submission
 
       - name: Download and verify changed upstream assets
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mapfile -t definitions < <(
             git -C submission diff --diff-filter=AMR --name-only HEAD^1 HEAD^2 -- 'games/*/mods/*.json'
